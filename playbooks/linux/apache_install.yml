@@ -1,0 +1,45 @@
+---
+- name: Instalar e configurar Apache em servidores Linux
+  hosts: linux
+  become: true
+  vars:
+    apache_package:
+      RedHat: httpd
+      Rocky: httpd
+      CentOS: httpd
+      Ubuntu: apache2
+      Debian: apache2
+    apache_service:
+      RedHat: httpd
+      Rocky: httpd
+      CentOS: httpd
+      Ubuntu: apache2
+      Debian: apache2
+
+  tasks:
+    - name: Garantir que o Apache esteja instalado
+      ansible.builtin.package:
+        name: "{{ apache_package[ansible_distribution] | default('httpd') }}"
+        state: present
+
+    - name: Garantir que o serviço Apache esteja ativo e habilitado
+      ansible.builtin.service:
+        name: "{{ apache_service[ansible_distribution] | default('httpd') }}"
+        state: started
+        enabled: true
+
+    - name: Criar página de teste personalizada
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+            <head><title>Lab AAP - Apache</title></head>
+            <body>
+              <h1>Servidor {{ inventory_hostname }} configurado pelo Ansible!</h1>
+              <p>Distribuição: {{ ansible_distribution }} {{ ansible_distribution_version }}</p>
+              <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
+            </body>
+          </html>
+        owner: root
+        group: root
+        mode: '0644'
