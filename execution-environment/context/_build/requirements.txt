@@ -1,0 +1,4 @@
+# Exemplo de libs úteis
+boto3
+google-auth
+pywinrm

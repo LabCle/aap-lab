@@ -1,0 +1,6 @@
+notas.txt
+*.log
+temp/
+.DS_Store
+.idea/
+.venv/

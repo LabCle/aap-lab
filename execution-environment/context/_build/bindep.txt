@@ -1,0 +1,8 @@
+# Compilação de extensões Python
+gcc [platform:rpm]
+python3-devel [platform:rpm]
+
+# Dependências para módulos crypto/openssl/libxml
+openssl-devel [platform:rpm]
+libxml2-devel [platform:rpm]
+libcurl-devel [platform:rpm]

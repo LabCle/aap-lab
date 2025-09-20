@@ -1,45 +1,30 @@
 ---
-- name: Instalar e configurar Apache em servidores Linux
+- name: Instalar e configurar Apache em Linux
   hosts: linux
   become: true
-  vars:
-    apache_package:
-      RedHat: httpd
-      Rocky: httpd
-      CentOS: httpd
-      Ubuntu: apache2
-      Debian: apache2
-    apache_service:
-      RedHat: httpd
-      Rocky: httpd
-      CentOS: httpd
-      Ubuntu: apache2
-      Debian: apache2
-
   tasks:
-    - name: Garantir que o Apache esteja instalado
+    - name: Garantir que Apache esteja instalado
       ansible.builtin.package:
-        name: "{{ apache_package[ansible_distribution] | default('httpd') }}"
+        name: "{{ 'httpd' if ansible_facts['os_family'] == 'RedHat' else 'apache2' }}"
         state: present
 
-    - name: Garantir que o serviço Apache esteja ativo e habilitado
+    - name: Garantir que Apache esteja ativo
       ansible.builtin.service:
-        name: "{{ apache_service[ansible_distribution] | default('httpd') }}"
+        name: "{{ 'httpd' if ansible_facts['os_family'] == 'RedHat' else 'apache2' }}"
         state: started
         enabled: true
 
-    - name: Criar página de teste personalizada
-      ansible.builtin.copy:
-        dest: /var/www/html/index.html
-        content: |
-          <html>
-            <head><title>Lab AAP - Apache</title></head>
-            <body>
-              <h1>Servidor {{ inventory_hostname }} configurado pelo Ansible!</h1>
-              <p>Distribuição: {{ ansible_distribution }} {{ ansible_distribution_version }}</p>
-              <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
-            </body>
-          </html>
-        owner: root
-        group: root
-        mode: '0644'
+    - name: Liberar porta 80 no firewall (Rocky)
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Liberar porta 80 no firewall (Ubuntu)
+      ansible.builtin.ufw:
+        rule: allow
+        port: '80'
+        proto: tcp
+      when: ansible_facts['os_family'] == 'Debian'
