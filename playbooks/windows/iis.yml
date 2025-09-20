@@ -23,6 +23,7 @@
     - name: Criar arquivo index.html de teste
       ansible.windows.win_copy:
         dest: C:\inetpub\wwwroot\ansible-lab\index.html
+        force: yes
         content: |
           <html>
             <head><title>Lab AAP - IIS</title></head>
