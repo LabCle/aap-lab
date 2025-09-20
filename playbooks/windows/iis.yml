@@ -2,6 +2,9 @@
 - name: Instalar IIS e configurar site de teste
   hosts: windows
   gather_facts: no
+  vars:
+    ansible_become: false   # 👈 reforço extra no playbook
+
   tasks:
     - name: Garantir que a feature IIS esteja instalada
       ansible.windows.win_feature:
@@ -29,7 +32,7 @@
           </html>
 
     - name: Criar novo site no IIS
-      community.windows.win_iis_website:
+      microsoft.iis.website:
         name: "AnsibleLabSite"
         state: started
         port: 8080
@@ -38,6 +41,6 @@
         hostname: ""
 
     - name: Parar o Default Web Site (porta 80)
-      community.windows.win_iis_website:
+      microsoft.iis.website:
         name: "Default Web Site"
         state: stopped
