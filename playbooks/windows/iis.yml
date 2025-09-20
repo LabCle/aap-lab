@@ -20,26 +20,18 @@
         path: C:\inetpub\wwwroot\ansible-lab
         state: directory
 
-    - name: Criar arquivo index.html de teste
-      ansible.windows.win_copy:
-        dest: C:\inetpub\wwwroot\ansible-lab\index.html
-        force: yes
-        content: |
-          <html>
-            <head><title>Lab AAP - IIS</title></head>
-            <body>
-              <h1>Site IIS configurado pelo Ansible!</h1>
-              <p>Host: {{ ansible_host }}</p>
-              
-              <!-- Opção 1: usando facts coletados -->
-              <p>Data/Hora (facts): {{ ansible_date_time.iso8601 }}</p>
-              
-              <!-- Opção 2: usando lookup direto no host -->
-              <!--
-              <p>Data/Hora (lookup): {{ lookup('pipe','date /T') }} {{ lookup('pipe','time /T') }}</p>
-              -->
-            </body>
-          </html>
+    - name: Criar index.html via PowerShell
+      ansible.windows.win_shell: |
+        @"
+        <html>
+          <head><title>Lab AAP - IIS</title></head>
+          <body>
+            <h1>Site IIS configurado pelo Ansible!</h1>
+            <p>Host: {{ ansible_host }}</p>
+            <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
+          </body>
+        </html>
+        "@ | Out-File -FilePath "C:\inetpub\wwwroot\ansible-lab\index.html" -Encoding utf8 -Force
 
     # 👉 Primeiro tenta com a coleção nova microsoft.iis
     - name: Criar novo site no IIS (microsoft.iis)
