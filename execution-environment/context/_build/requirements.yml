@@ -10,6 +10,7 @@ collections:
   # Windows (para cenários futuros)
   - name: ansible.windows
   - name: community.windows
+  - name: microsoft.iis
 
   # Containers
   - name: community.docker

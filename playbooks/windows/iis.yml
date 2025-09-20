@@ -2,8 +2,10 @@
 - name: Instalar IIS e configurar site de teste
   hosts: windows
   gather_facts: no
-  vars:
-    ansible_become: false   # 👈 reforço extra no playbook
+  collections:
+    - ansible.windows
+    - microsoft.iis       # garante que vai procurar na collection nova
+    - community.windows   # fallback para compatibilidade
 
   tasks:
     - name: Garantir que a feature IIS esteja instalada
@@ -13,25 +15,26 @@
         include_sub_features: yes
         include_management_tools: yes
 
-    - name: Criar diretório para site
+    - name: Garantir que o diretório do site exista
       ansible.windows.win_file:
         path: C:\inetpub\wwwroot\ansible-lab
         state: directory
 
-    - name: Criar página HTML de teste
+    - name: Criar arquivo index.html de teste
       ansible.windows.win_copy:
         dest: C:\inetpub\wwwroot\ansible-lab\index.html
         content: |
           <html>
             <head><title>Lab AAP - IIS</title></head>
             <body>
-              <h1>Servidor IIS configurado pelo Ansible!</h1>
-              <p>Hostname: {{ ansible_hostname }}</p>
+              <h1>Site IIS configurado pelo Ansible!</h1>
+              <p>Host: {{ ansible_host }}</p>
               <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
             </body>
           </html>
 
-    - name: Criar novo site no IIS
+    # 👉 Tente usar a collection nova microsoft.iis
+    - name: Criar novo site no IIS (microsoft.iis)
       microsoft.iis.website:
         name: "AnsibleLabSite"
         state: started
@@ -39,8 +42,15 @@
         physical_path: C:\inetpub\wwwroot\ansible-lab
         ip: "*"
         hostname: ""
+      ignore_errors: yes   # caso a coleção não esteja disponível
 
-    - name: Parar o Default Web Site (porta 80)
-      microsoft.iis.website:
-        name: "Default Web Site"
-        state: stopped
+    # 👉 Fallback com a coleção antiga (deprecada, mas funciona)
+    - name: Criar novo site no IIS (community.windows)
+      community.windows.win_iis_website:
+        name: "AnsibleLabSite"
+        state: started
+        port: 8080
+        physical_path: C:\inetpub\wwwroot\ansible-lab
+        ip: "*"
+        hostname: ""
+      when: ansible_failed_result is defined
