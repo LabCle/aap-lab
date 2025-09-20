@@ -1,40 +1,43 @@
 ---
-- name: Instalar IIS e configurar site
+- name: Instalar IIS e configurar site de teste
   hosts: windows
   gather_facts: no
   tasks:
-    - name: Garantir que o IIS esteja instalado
+    - name: Garantir que a feature IIS esteja instalada
       ansible.windows.win_feature:
         name: Web-Server
         state: present
+        include_sub_features: yes
+        include_management_tools: yes
 
-    - name: Garantir que o serviço IIS esteja rodando
-      ansible.windows.win_service:
-        name: W3SVC
-        state: started
-        start_mode: auto
-
-    - name: Criar diretório do site
+    - name: Criar diretório para site
       ansible.windows.win_file:
-        path: C:\inetpub\wwwroot\lab
+        path: C:\inetpub\wwwroot\ansible-lab
         state: directory
 
-    - name: Criar página index.html
+    - name: Criar página HTML de teste
       ansible.windows.win_copy:
-        dest: C:\inetpub\wwwroot\lab\index.html
+        dest: C:\inetpub\wwwroot\ansible-lab\index.html
         content: |
           <html>
             <head><title>Lab AAP - IIS</title></head>
             <body>
               <h1>Servidor IIS configurado pelo Ansible!</h1>
-              <p>Host: {{ inventory_hostname }}</p>
+              <p>Hostname: {{ ansible_hostname }}</p>
               <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
             </body>
           </html>
 
-    - name: Configurar Default Website para apontar para nova pasta
+    - name: Criar novo site no IIS
+      community.windows.win_iis_website:
+        name: "AnsibleLabSite"
+        state: started
+        port: 8080
+        physical_path: C:\inetpub\wwwroot\ansible-lab
+        ip: "*"
+        hostname: ""
+
+    - name: Parar o Default Web Site (porta 80)
       community.windows.win_iis_website:
         name: "Default Web Site"
-        state: started
-        port: 80
-        physical_path: C:\inetpub\wwwroot\lab
+        state: stopped
