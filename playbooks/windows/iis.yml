@@ -1,56 +1,42 @@
 ---
 - name: Instalar IIS e configurar site de teste
   hosts: windows
-  gather_facts: yes   # coleta facts para usar ansible_date_time
-  collections:
-    - ansible.windows
-    - microsoft.iis
-    - community.windows
-
+  gather_facts: yes
   tasks:
+
     - name: Garantir que a feature IIS esteja instalada
       ansible.windows.win_feature:
         name: Web-Server
         state: present
-        include_sub_features: yes
         include_management_tools: yes
+
+    - name: Parar e remover o site default
+      community.windows.win_iis_website:
+        name: "Default Web Site"
+        state: absent
 
     - name: Garantir que o diretório do site exista
       ansible.windows.win_file:
-        path: C:\inetpub\wwwroot\ansible-lab
+        path: C:\inetpub\meusite
         state: directory
 
-    - name: Criar index.html via PowerShell
-      ansible.windows.win_shell: |
-        @"
-        <html>
+    - name: Criar arquivo index.html de teste
+      ansible.windows.win_copy:
+        dest: C:\inetpub\meusite\index.html
+        content: |
+          <html>
           <head><title>Lab AAP - IIS</title></head>
           <body>
             <h1>Site IIS configurado pelo Ansible!</h1>
             <p>Host: {{ ansible_host }}</p>
             <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
           </body>
-        </html>
-        "@ | Out-File -FilePath "C:\inetpub\wwwroot\ansible-lab\index.html" -Encoding utf8 -Force
+          </html>
 
-    # 👉 Primeiro tenta com a coleção nova microsoft.iis
-    - name: Criar novo site no IIS (microsoft.iis)
-      microsoft.iis.website:
-        name: "AnsibleLabSite"
-        state: started
-        port: 8080
-        physical_path: C:\inetpub\wwwroot\ansible-lab
-        ip: "*"
-        hostname: ""
-      ignore_errors: yes
-
-    # 👉 Se falhar, cai para a coleção antiga community.windows
-    - name: Criar novo site no IIS (community.windows)
+    - name: Criar novo site no IIS
       community.windows.win_iis_website:
-        name: "AnsibleLabSite"
+        name: "LabAAPSite"
         state: started
-        port: 8080
-        physical_path: C:\inetpub\wwwroot\ansible-lab
-        ip: "*"
-        hostname: ""
-      when: ansible_failed_result is defined
+        port: 80
+        physical_path: C:\inetpub\meusite
+        application_pool: DefaultAppPool
