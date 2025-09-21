@@ -35,12 +35,13 @@ jobs:
         run: |
           cd execution-environment
           ansible-builder build \
+            --container-runtime docker \
             -t quay.io/clecioantao/aap-ee:latest \
             -t quay.io/clecioantao/aap-ee:${{ github.sha }} \
             -f execution-environment.yml
 
       - name: Push to Quay.io (latest)
-        run: podman push quay.io/clecioantao/aap-ee:latest
+        run: docker push quay.io/clecioantao/aap-ee:latest
 
       - name: Push to Quay.io (commit SHA)
-        run: podman push quay.io/clecioantao/aap-ee:${{ github.sha }}
+        run: docker push quay.io/clecioantao/aap-ee:${{ github.sha }}
