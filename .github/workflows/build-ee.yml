@@ -35,8 +35,8 @@ jobs:
         run: |
           cd execution-environment
           ansible-builder build \
-            -t quay.io/clecioantao%2Bclecioantao1/aap-ee:latest \
-            -t quay.io/clecioantao%2Bclecioantao1/aap-ee:${{ github.sha }} \
+            -t quay.io/clecioantao/aap-ee:latest \
+            -t quay.io/clecioantao/aap-ee:${{ github.sha }} \
             -f execution-environment.yml
 
       - name: Push to Quay.io (latest)
