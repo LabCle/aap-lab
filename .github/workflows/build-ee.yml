@@ -40,7 +40,7 @@ jobs:
             -f execution-environment.yml
 
       - name: Push to Quay.io (latest)
-        run: podman push quay.io/clecioantaoaap-ee:latest
+        run: podman push quay.io/clecioantao/aap-ee:latest
 
       - name: Push to Quay.io (commit SHA)
         run: podman push quay.io/clecioantao/aap-ee:${{ github.sha }}
