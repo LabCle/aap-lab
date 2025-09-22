@@ -18,4 +18,4 @@ additional_build_steps:
   prepend_base:
     - RUN dnf install -y git && dnf clean all
   append_final:
-    - RUN echo "✅ EE customizado buildado com sucesso - Teste CI - 10!"
+    - RUN echo "✅ EE customizado buildado com sucesso - Teste CI - 11!"
