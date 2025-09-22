@@ -11,8 +11,6 @@ on:
 jobs:
   build-ee:
     runs-on: ubuntu-latest
-    env:
-      ANSIBLE_BUILDER_CONTAINER_RUNTIME: docker   # 👈 força o ansible-builder a usar Docker
 
     steps:
       - name: Checkout repository
@@ -37,6 +35,7 @@ jobs:
         run: |
           cd execution-environment
           ansible-builder build \
+            --container-runtime=docker \   # 👈 força uso do docker
             -t quay.io/clecioantao/aap-ee:latest \
             -t quay.io/clecioantao/aap-ee:${{ github.sha }} \
             -f execution-environment.yml
