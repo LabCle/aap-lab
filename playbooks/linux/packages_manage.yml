@@ -1,0 +1,17 @@
+---
+- name: Gerenciar pacotes básicos no Linux
+  hosts: linux
+  become: true
+
+  vars:
+    pacotes:
+      - vim
+      - curl
+      - git
+      - htop
+
+  tasks:
+    - name: Instalar lista de pacotes
+      ansible.builtin.package:
+        name: "{{ pacotes }}"
+        state: present

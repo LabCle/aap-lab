@@ -1,0 +1,30 @@
+---
+- name: Instalar e configurar Nginx no Linux
+  hosts: linux
+  become: true
+
+  tasks:
+    - name: Garantir que o Nginx esteja instalado
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Garantir que o Nginx esteja ativo
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Criar página de teste no Nginx
+      ansible.builtin.copy:
+        dest: /usr/share/nginx/html/index.html
+        content: |
+          <html>
+            <head><title>Lab AAP - Nginx</title></head>
+            <body>
+              <h1>Servidor {{ inventory_hostname }} configurado pelo Ansible!</h1>
+              <p>Distribuição: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</p>
+              <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
+            </body>
+          </html>
+        mode: '0644'

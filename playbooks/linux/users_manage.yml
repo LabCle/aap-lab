@@ -1,0 +1,21 @@
+---
+- name: Gerenciar usuários no Linux
+  hosts: linux
+  become: true
+
+  vars:
+    usuarios:
+      - nome: devops
+        senha: "{{ 'DevOps@123' | password_hash('sha512') }}"
+      - nome: ansible
+        senha: "{{ 'Ansible@123' | password_hash('sha512') }}"
+
+  tasks:
+    - name: Criar usuários com senha
+      ansible.builtin.user:
+        name: "{{ item.nome }}"
+        password: "{{ item.senha }}"
+        state: present
+        shell: /bin/bash
+      loop: "{{ usuarios }}"
+      notify: Exibir usuários criados

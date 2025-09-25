@@ -1,0 +1,21 @@
+---
+- name: Gerenciar usuários no Windows
+  hosts: windows
+  gather_facts: false
+
+  vars:
+    usuarios:
+      - nome: devops
+        senha: "DevOps@123"
+      - nome: ansible
+        senha: "Ansible@123"
+
+  tasks:
+    - name: Criar usuários locais
+      ansible.windows.win_user:
+        name: "{{ item.nome }}"
+        password: "{{ item.senha }}"
+        state: present
+        groups:
+          - Users
+      loop: "{{ usuarios }}"
