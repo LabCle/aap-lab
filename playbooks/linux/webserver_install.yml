@@ -1,0 +1,64 @@
+---
+- name: Instalar e configurar servidor web (Apache ou Nginx)
+  hosts: linux
+  become: true
+
+  vars:
+    web_server: apache   # valor padrão, pode ser sobrescrito via Survey no AAP
+
+  tasks:
+    - name: Instalar Apache
+      ansible.builtin.package:
+        name: "{{ 'httpd' if ansible_facts['os_family'] == 'RedHat' else 'apache2' }}"
+        state: present
+      when: web_server == "apache"
+
+    - name: Garantir que o Apache esteja ativo
+      ansible.builtin.service:
+        name: "{{ 'httpd' if ansible_facts['os_family'] == 'RedHat' else 'apache2' }}"
+        state: started
+        enabled: true
+      when: web_server == "apache"
+
+    - name: Criar página de teste para Apache
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+            <head><title>Lab AAP - Apache</title></head>
+            <body>
+              <h1>Servidor {{ inventory_hostname }} configurado com Apache via Ansible!</h1>
+              <p>Distribuição: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</p>
+              <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
+            </body>
+          </html>
+        mode: '0644'
+      when: web_server == "apache"
+
+    - name: Instalar Nginx
+      ansible.builtin.package:
+        name: nginx
+        state: present
+      when: web_server == "nginx"
+
+    - name: Garantir que o Nginx esteja ativo
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+      when: web_server == "nginx"
+
+    - name: Criar página de teste para Nginx
+      ansible.builtin.copy:
+        dest: /usr/share/nginx/html/index.html
+        content: |
+          <html>
+            <head><title>Lab AAP - Nginx</title></head>
+            <body>
+              <h1>Servidor {{ inventory_hostname }} configurado com Nginx via Ansible!</h1>
+              <p>Distribuição: {{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}</p>
+              <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
+            </body>
+          </html>
+        mode: '0644'
+      when: web_server == "nginx"
