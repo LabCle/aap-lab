@@ -1,0 +1,46 @@
+---
+- name: Configurar múltiplos sites no IIS
+  hosts: windows
+  gather_facts: false
+
+  vars:
+    sites:
+      - nome: "Site1"
+        caminho: "C:\\inetpub\\site1"
+        porta: 8081
+      - nome: "Site2"
+        caminho: "C:\\inetpub\\site2"
+        porta: 8082
+
+  tasks:
+    - name: Garantir que o IIS esteja instalado
+      ansible.windows.win_feature:
+        name: Web-Server
+        state: present
+
+    - name: Criar diretórios dos sites
+      ansible.windows.win_file:
+        path: "{{ item.caminho }}"
+        state: directory
+      loop: "{{ sites }}"
+
+    - name: Criar páginas de teste para cada site
+      ansible.windows.win_copy:
+        dest: "{{ item.caminho }}\\index.html"
+        content: |
+          <html>
+            <head><title>{{ item.nome }}</title></head>
+            <body>
+              <h1>{{ item.nome }} - configurado pelo Ansible!</h1>
+              <p>Data/Hora: {{ ansible_date_time.iso8601 }}</p>
+            </body>
+          </html>
+      loop: "{{ sites }}"
+
+    - name: Criar sites no IIS
+      community.windows.win_iis_website:
+        name: "{{ item.nome }}"
+        state: started
+        port: "{{ item.porta }}"
+        physical_path: "{{ item.caminho }}"
+      loop: "{{ sites }}"
