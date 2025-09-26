@@ -1,6 +1,6 @@
 ---
 - name: Configurar múltiplos sites no IIS
-  hosts: windows
+  hosts: all
   gather_facts: false
 
   vars:
