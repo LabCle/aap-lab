@@ -9,7 +9,6 @@ libcurl-devel [platform:rpm]
 
 # MySQL/MariaDB
 mariadb-connector-c-devel [platform:rpm]
-mariadb-devel [platform:rpm]
 
 # PostgreSQL
 postgresql-devel [platform:rpm]
