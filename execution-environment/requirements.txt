@@ -2,3 +2,5 @@
 boto3
 google-auth
 pywinrm
+PyMySQL
+psycopg2-binary

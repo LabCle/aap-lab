@@ -1,0 +1,100 @@
+---
+- name: Instalar e configurar MySQL/MariaDB e PostgreSQL
+  hosts: linux
+  become: true
+  vars:
+    # Variáveis MySQL/MariaDB
+    mysql_root_password: "SenhaForte123"
+    mysql_test_db: "labdb"
+    mysql_test_user: "labuser"
+    mysql_test_password: "LabPass123"
+
+    # Variáveis PostgreSQL
+    postgres_db: "labpg"
+    postgres_user: "pguser"
+    postgres_password: "PgPass123"
+
+  tasks:
+    ######################################################################
+    # MySQL / MariaDB
+    ######################################################################
+    - name: Instalar pacotes MySQL/MariaDB
+      ansible.builtin.package:
+        name: "{{ 'mariadb-server' if ansible_facts['os_family'] == 'RedHat' else 'mysql-server' }}"
+        state: present
+
+    - name: Garantir que MySQL/MariaDB esteja ativo
+      ansible.builtin.service:
+        name: "{{ 'mariadb' if ansible_facts['os_family'] == 'RedHat' else 'mysql' }}"
+        state: started
+        enabled: true
+
+    - name: Definir senha do root (somente se ainda não configurada)
+      community.mysql.mysql_user:
+        name: root
+        host: "{{ item }}"
+        password: "{{ mysql_root_password }}"
+        login_unix_socket: "{{ '/var/lib/mysql/mysql.sock' if ansible_facts['os_family'] == 'RedHat' else '/var/run/mysqld/mysqld.sock' }}"
+        state: present
+      loop:
+        - "localhost"
+        - "127.0.0.1"
+        - "::1"
+
+    - name: Criar database de teste MySQL
+      community.mysql.mysql_db:
+        name: "{{ mysql_test_db }}"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Criar usuário de teste MySQL
+      community.mysql.mysql_user:
+        name: "{{ mysql_test_user }}"
+        password: "{{ mysql_test_password }}"
+        priv: "{{ mysql_test_db }}.*:ALL"
+        host: "%"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    ######################################################################
+    # PostgreSQL
+    ######################################################################
+    - name: Instalar PostgreSQL
+      ansible.builtin.package:
+        name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
+        state: present
+
+    - name: Instalar client e contrib (Postgres extras)
+      ansible.builtin.package:
+        name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
+        state: present
+      ignore_errors: true  # pode não existir em todas distros
+
+    - name: Inicializar banco de dados PostgreSQL (somente RedHat)
+      ansible.builtin.command: postgresql-setup --initdb
+      when: ansible_facts['os_family'] == "RedHat"
+      args:
+        creates: /var/lib/pgsql/data/PG_VERSION
+
+    - name: Garantir que PostgreSQL esteja ativo
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: true
+
+    - name: Criar database de teste PostgreSQL
+      community.postgresql.postgresql_db:
+        name: "{{ postgres_db }}"
+        state: present
+        login_user: postgres
+
+    - name: Criar usuário de teste PostgreSQL
+      community.postgresql.postgresql_user:
+        name: "{{ postgres_user }}"
+        password: "{{ postgres_password }}"
+        db: "{{ postgres_db }}"
+        priv: ALL
+        state: present
+        login_user: postgres
