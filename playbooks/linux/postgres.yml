@@ -16,7 +16,7 @@
         name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
         state: present
 
-    - name: Instalar pacotes adicionais (client/contrib)
+    - name: Instalar pacotes extras (client/contrib)
       ansible.builtin.package:
         name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
         state: present
@@ -35,42 +35,20 @@
         enabled: true
 
     ######################################################################
-    # Preparação para autenticação com senha
-    ######################################################################
-    - name: Criar arquivo .pgpass no RedHat
-      ansible.builtin.copy:
-        dest: /var/lib/pgsql/.pgpass
-        content: "*:*:*:postgres:{{ postgres_password }}"
-        owner: postgres
-        group: postgres
-        mode: '0600'
-      when: ansible_facts['os_family'] == "RedHat"
-
-    - name: Criar arquivo .pgpass no Debian/Ubuntu
-      ansible.builtin.copy:
-        dest: /var/lib/postgresql/.pgpass
-        content: "*:*:*:postgres:{{ postgres_password }}"
-        owner: postgres
-        group: postgres
-        mode: '0600'
-      when: ansible_facts['os_family'] == "Debian"
-
-    ######################################################################
-    # Criação de objetos no banco
+    # Configuração
     ######################################################################
     - name: Criar database de teste PostgreSQL
+      become_user: "{{ 'postgres' if ansible_facts['os_family'] != 'RedHat' else 'postgres' }}"
       community.postgresql.postgresql_db:
         name: "{{ postgres_db }}"
         state: present
-      become: true
-      become_user: postgres
 
     - name: Criar usuário de teste PostgreSQL
+      become_user: "{{ 'postgres' if ansible_facts['os_family'] != 'RedHat' else 'postgres' }}"
       community.postgresql.postgresql_user:
         name: "{{ postgres_user }}"
         password: "{{ postgres_password }}"
-        db: "{{ postgres_db }}"
+        databases:
+          - "{{ postgres_db }}"   # ✅ substitui o antigo "db"
         priv: ALL
         state: present
-      become: true
-      become_user: postgres
