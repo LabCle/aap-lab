@@ -8,18 +8,21 @@
     postgres_password: "PgPass123"
 
   tasks:
-    - name: Instalar PostgreSQL
+    ######################################################################
+    # Instalação
+    ######################################################################
+    - name: Instalar PostgreSQL (server)
       ansible.builtin.package:
         name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
         state: present
 
-    - name: Instalar client e contrib (extras do PostgreSQL)
+    - name: Instalar pacotes adicionais (client/contrib)
       ansible.builtin.package:
         name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
         state: present
       ignore_errors: true
 
-    - name: Inicializar banco de dados PostgreSQL (apenas RedHat)
+    - name: Inicializar banco de dados PostgreSQL (somente RedHat)
       ansible.builtin.command: postgresql-setup --initdb
       when: ansible_facts['os_family'] == "RedHat"
       args:
@@ -31,11 +34,36 @@
         state: started
         enabled: true
 
+    ######################################################################
+    # Preparação para autenticação com senha
+    ######################################################################
+    - name: Criar arquivo .pgpass no RedHat
+      ansible.builtin.copy:
+        dest: /var/lib/pgsql/.pgpass
+        content: "*:*:*:postgres:{{ postgres_password }}"
+        owner: postgres
+        group: postgres
+        mode: '0600'
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Criar arquivo .pgpass no Debian/Ubuntu
+      ansible.builtin.copy:
+        dest: /var/lib/postgresql/.pgpass
+        content: "*:*:*:postgres:{{ postgres_password }}"
+        owner: postgres
+        group: postgres
+        mode: '0600'
+      when: ansible_facts['os_family'] == "Debian"
+
+    ######################################################################
+    # Criação de objetos no banco
+    ######################################################################
     - name: Criar database de teste PostgreSQL
       community.postgresql.postgresql_db:
         name: "{{ postgres_db }}"
         state: present
-        login_user: postgres
+      become: true
+      become_user: postgres
 
     - name: Criar usuário de teste PostgreSQL
       community.postgresql.postgresql_user:
@@ -44,4 +72,5 @@
         db: "{{ postgres_db }}"
         priv: ALL
         state: present
-        login_user: postgres
+      become: true
+      become_user: postgres
