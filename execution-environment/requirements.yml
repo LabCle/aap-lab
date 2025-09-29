@@ -17,7 +17,8 @@ collections:
 
   # Banco de dados 
   - name: community.mysql
-  - name: community.postgresql
+  - name: community.postgresql 
+    version: ">=3.2.0"
 
   # Segurança e criptografia
   - name: community.crypto

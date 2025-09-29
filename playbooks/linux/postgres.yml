@@ -11,18 +11,18 @@
     ######################################################################
     # Instalação
     ######################################################################
-    - name: Instalar PostgreSQL (server)
+    - name: Instalar PostgreSQL
       ansible.builtin.package:
         name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
         state: present
 
-    - name: Instalar pacotes extras (client/contrib)
+    - name: Instalar contrib
       ansible.builtin.package:
         name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
         state: present
       ignore_errors: true
 
-    - name: Inicializar banco de dados PostgreSQL (somente RedHat)
+    - name: Inicializar banco de dados PostgreSQL (RedHat)
       ansible.builtin.command: postgresql-setup --initdb
       when: ansible_facts['os_family'] == "RedHat"
       args:
@@ -35,20 +35,27 @@
         enabled: true
 
     ######################################################################
-    # Configuração
+    # Criação de objetos
     ######################################################################
     - name: Criar database de teste PostgreSQL
-      become_user: "{{ 'postgres' if ansible_facts['os_family'] != 'RedHat' else 'postgres' }}"
+      become_user: postgres
       community.postgresql.postgresql_db:
         name: "{{ postgres_db }}"
         state: present
 
     - name: Criar usuário de teste PostgreSQL
-      become_user: "{{ 'postgres' if ansible_facts['os_family'] != 'RedHat' else 'postgres' }}"
+      become_user: postgres
       community.postgresql.postgresql_user:
         name: "{{ postgres_user }}"
         password: "{{ postgres_password }}"
-        databases:
-          - "{{ postgres_db }}"   # ✅ substitui o antigo "db"
-        priv: ALL
+        role_attr_flags: CREATEDB,LOGIN
+        state: present
+
+    - name: Garantir privilégios no DB
+      become_user: postgres
+      community.postgresql.postgresql_privs:
+        db: "{{ postgres_db }}"
+        roles: "{{ postgres_user }}"
+        type: database
+        privs: ALL
         state: present
