@@ -3,26 +3,18 @@
   hosts: linux
   become: true
   vars:
+    # Variáveis MySQL/MariaDB
     mysql_root_password: "SenhaForte123"
     mysql_test_db: "labdb"
     mysql_test_user: "labuser"
     mysql_test_password: "LabPass123"
 
+    # Variáveis PostgreSQL
     postgres_db: "labpg"
     postgres_user: "pguser"
     postgres_password: "PgPass123"
 
   tasks:
-    ######################################################################
-    # Pré-requisitos Python
-    ######################################################################
-    - name: Instalar dependências Python para MySQL/Postgres
-      ansible.builtin.package:
-        name: >-
-          {{ 'python3-PyMySQL,python3-psycopg2' if ansible_facts['os_family'] == 'RedHat'
-             else 'python3-pymysql,python3-psycopg2' }}
-        state: present
-
     ######################################################################
     # MySQL / MariaDB
     ######################################################################
@@ -37,13 +29,28 @@
         state: started
         enabled: true
 
-    - name: Definir senha do root (primeira vez via unix_socket)
+    - name: Definir senha do root (se ainda não configurada)
       community.mysql.mysql_user:
         name: root
-        host: localhost
+        host: "{{ item }}"
         password: "{{ mysql_root_password }}"
         login_unix_socket: "{{ '/var/lib/mysql/mysql.sock' if ansible_facts['os_family'] == 'RedHat' else '/var/run/mysqld/mysqld.sock' }}"
         state: present
+      loop:
+        - "localhost"
+        - "127.0.0.1"
+        - "::1"
+
+    - name: Criar arquivo .my.cnf para root
+      ansible.builtin.copy:
+        dest: /root/.my.cnf
+        content: |
+          [client]
+          user=root
+          password={{ mysql_root_password }}
+        owner: root
+        group: root
+        mode: '0600'
 
     - name: Criar database de teste MySQL
       community.mysql.mysql_db:
@@ -70,7 +77,13 @@
         name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
         state: present
 
-    - name: Inicializar banco de dados PostgreSQL (somente RedHat)
+    - name: Instalar client e contrib (extras do PostgreSQL)
+      ansible.builtin.package:
+        name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
+        state: present
+      ignore_errors: true  # pode não existir em todas distros
+
+    - name: Inicializar banco de dados PostgreSQL (apenas RedHat)
       ansible.builtin.command: postgresql-setup --initdb
       when: ansible_facts['os_family'] == "RedHat"
       args:
@@ -96,26 +109,3 @@
         priv: ALL
         state: present
         login_user: postgres
-
-    ######################################################################
-    # Validação
-    ######################################################################
-    - name: Validar databases no MySQL
-      community.mysql.mysql_query:
-        login_user: root
-        login_password: "{{ mysql_root_password }}"
-        query: "SHOW DATABASES;"
-      register: mysql_dbs
-
-    - name: Mostrar resultado MySQL
-      ansible.builtin.debug:
-        var: mysql_dbs.query_result
-
-    - name: Validar databases no PostgreSQL
-      community.postgresql.postgresql_info:
-        login_user: postgres
-      register: pg_info
-
-    - name: Mostrar resultado PostgreSQL
-      ansible.builtin.debug:
-        var: pg_info.databases
