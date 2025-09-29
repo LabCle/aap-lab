@@ -2,3 +2,10 @@
 boto3
 google-auth
 pywinrm
+
+# MySQL
+PyMySQL
+mysqlclient
+
+# PostgreSQL
+psycopg2-binary

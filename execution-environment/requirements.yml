@@ -24,6 +24,3 @@ collections:
 
   # Cloud - Google
   - name: google.cloud
-
-  - name: community.mysql
-  - name: community.postgresql

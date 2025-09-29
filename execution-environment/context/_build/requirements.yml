@@ -1,5 +1,5 @@
 ---
-# Lista inicial de collections para seu laboratório AAP
+# Lista inicial de collections 
 # Inclui Linux, Windows e GCP, além de utilidades gerais.
 
 collections:
@@ -7,7 +7,7 @@ collections:
   - name: ansible.posix
   - name: community.general
 
-  # Windows (para cenários futuros)
+  # Windows 
   - name: ansible.windows
   - name: community.windows
   - name: microsoft.iis
@@ -15,7 +15,7 @@ collections:
   # Containers
   - name: community.docker
 
-  # Banco de dados (opcional, para labs avançados)
+  # Banco de dados 
   - name: community.mysql
   - name: community.postgresql
 
