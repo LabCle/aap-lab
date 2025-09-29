@@ -1,0 +1,47 @@
+---
+- name: Instalar e configurar PostgreSQL
+  hosts: linux
+  become: true
+  vars:
+    postgres_db: "labpg"
+    postgres_user: "pguser"
+    postgres_password: "PgPass123"
+
+  tasks:
+    - name: Instalar PostgreSQL
+      ansible.builtin.package:
+        name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
+        state: present
+
+    - name: Instalar client e contrib (extras do PostgreSQL)
+      ansible.builtin.package:
+        name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
+        state: present
+      ignore_errors: true
+
+    - name: Inicializar banco de dados PostgreSQL (apenas RedHat)
+      ansible.builtin.command: postgresql-setup --initdb
+      when: ansible_facts['os_family'] == "RedHat"
+      args:
+        creates: /var/lib/pgsql/data/PG_VERSION
+
+    - name: Garantir que PostgreSQL esteja ativo
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: true
+
+    - name: Criar database de teste PostgreSQL
+      community.postgresql.postgresql_db:
+        name: "{{ postgres_db }}"
+        state: present
+        login_user: postgres
+
+    - name: Criar usuário de teste PostgreSQL
+      community.postgresql.postgresql_user:
+        name: "{{ postgres_user }}"
+        password: "{{ postgres_password }}"
+        db: "{{ postgres_db }}"
+        priv: ALL
+        state: present
+        login_user: postgres
