@@ -16,21 +16,21 @@
     - name: Exibir bancos MySQL
       debug:
         var: mysql_info.databases
-      when: mysql_info is defined
+      when: mysql_info is defined and mysql_info.databases is defined
 
     ######################################################################
     # Validação PostgreSQL
     ######################################################################
-    - name: Validar bancos PostgreSQL (com usuário dedicado)
+    - name: Validar bancos PostgreSQL
       community.postgresql.postgresql_info:
         login_user: pguser
         login_password: "PgPass123"
-        db: labpg
+        login_db: postgres     # 👈 aqui é o parâmetro correto
       register: pg_info
       become_user: postgres
       ignore_errors: true
 
     - name: Exibir bancos PostgreSQL
       debug:
-        var: pg_info.databases
+        var: pg_info
       when: pg_info is defined
