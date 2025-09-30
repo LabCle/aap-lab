@@ -8,25 +8,22 @@
     postgres_password: "PgPass123"
 
   tasks:
-    ######################################################################
-    # Instalação
-    ######################################################################
     - name: Instalar PostgreSQL
       ansible.builtin.package:
         name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
         state: present
 
-    - name: Instalar contrib
+    - name: Instalar pacotes adicionais (contrib)
       ansible.builtin.package:
         name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
         state: present
       ignore_errors: true
 
-    - name: Inicializar banco de dados PostgreSQL (RedHat)
+    - name: Inicializar banco de dados PostgreSQL (somente RedHat)
       ansible.builtin.command: postgresql-setup --initdb
-      when: ansible_facts['os_family'] == "RedHat"
       args:
         creates: /var/lib/pgsql/data/PG_VERSION
+      when: ansible_facts['os_family'] == "RedHat"
 
     - name: Garantir que PostgreSQL esteja ativo
       ansible.builtin.service:
@@ -35,27 +32,54 @@
         enabled: true
 
     ######################################################################
-    # Criação de objetos
+    # Ajuste de autenticação no pg_hba.conf
+    ######################################################################
+    - name: Ajustar pg_hba.conf (RedHat - IPv4)
+      ansible.builtin.lineinfile:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '^host\s+all\s+all\s+127\.0\.0\.1/32\s+.*$'
+        line: 'host all all 127.0.0.1/32 md5'
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+      notify: restart postgres
+
+    - name: Ajustar pg_hba.conf (RedHat - IPv6)
+      ansible.builtin.lineinfile:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '^host\s+all\s+all\s+::1/128\s+.*$'
+        line: 'host all all ::1/128 md5'
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+      notify: restart postgres
+
+    - name: Ajustar pg_hba.conf (Debian/Ubuntu - local)
+      ansible.builtin.lineinfile:
+        path: "/etc/postgresql/{{ ansible_facts['distribution_major_version'] }}/main/pg_hba.conf"
+        regexp: '^local\s+all\s+all\s+.*$'
+        line: 'local all all md5'
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+      notify: restart postgres
+
+    ######################################################################
+    # Criação de DB e usuário
     ######################################################################
     - name: Criar database de teste PostgreSQL
-      become_user: postgres
       community.postgresql.postgresql_db:
         name: "{{ postgres_db }}"
         state: present
+        login_user: postgres
 
     - name: Criar usuário de teste PostgreSQL
-      become_user: postgres
       community.postgresql.postgresql_user:
         name: "{{ postgres_user }}"
         password: "{{ postgres_password }}"
         role_attr_flags: CREATEDB,LOGIN
         state: present
+        login_user: postgres
 
-    - name: Garantir privilégios no DB
-      become_user: postgres
-      community.postgresql.postgresql_privs:
-        db: "{{ postgres_db }}"
-        roles: "{{ postgres_user }}"
-        type: database
-        privs: ALL
-        state: present
+  handlers:
+    - name: restart postgres
+      ansible.builtin.service:
+        name: postgresql
+        state: restarted
