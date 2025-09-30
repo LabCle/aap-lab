@@ -8,12 +8,15 @@
     postgres_password: "PgPass123"
 
   tasks:
-    - name: Instalar PostgreSQL
+    ######################################################################
+    # Instalação
+    ######################################################################
+    - name: Instalar PostgreSQL (server)
       ansible.builtin.package:
         name: "{{ 'postgresql-server' if ansible_facts['os_family'] == 'RedHat' else 'postgresql' }}"
         state: present
 
-    - name: Instalar pacotes adicionais (contrib)
+    - name: Instalar pacotes extras PostgreSQL
       ansible.builtin.package:
         name: "{{ 'postgresql-contrib' if ansible_facts['os_family'] == 'RedHat' else 'postgresql-contrib' }}"
         state: present
@@ -21,10 +24,40 @@
 
     - name: Inicializar banco de dados PostgreSQL (somente RedHat)
       ansible.builtin.command: postgresql-setup --initdb
+      when: ansible_facts['os_family'] == "RedHat"
       args:
         creates: /var/lib/pgsql/data/PG_VERSION
-      when: ansible_facts['os_family'] == "RedHat"
 
+    ######################################################################
+    # Ajuste pg_hba.conf
+    ######################################################################
+    - name: Descobrir caminho do pg_hba.conf no Ubuntu/Debian
+      ansible.builtin.shell: "ls -1 /etc/postgresql/*/main/pg_hba.conf | head -n 1"
+      register: pg_hba_conf_path
+      changed_when: false
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Ajustar pg_hba.conf (Debian/Ubuntu)
+      ansible.builtin.lineinfile:
+        path: "{{ pg_hba_conf_path.stdout }}"
+        regexp: '^local\s+all\s+all\s+.*$'
+        line: 'local all all md5'
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+      notify: restart postgres
+
+    - name: Ajustar pg_hba.conf (RedHat)
+      ansible.builtin.lineinfile:
+        path: /var/lib/pgsql/data/pg_hba.conf
+        regexp: '^local\s+all\s+all\s+.*$'
+        line: 'local all all md5'
+        state: present
+      when: ansible_facts['os_family'] == "RedHat"
+      notify: restart postgres
+
+    ######################################################################
+    # Serviço
+    ######################################################################
     - name: Garantir que PostgreSQL esteja ativo
       ansible.builtin.service:
         name: postgresql
@@ -32,37 +65,7 @@
         enabled: true
 
     ######################################################################
-    # Ajuste de autenticação no pg_hba.conf
-    ######################################################################
-    - name: Ajustar pg_hba.conf (RedHat - IPv4)
-      ansible.builtin.lineinfile:
-        path: /var/lib/pgsql/data/pg_hba.conf
-        regexp: '^host\s+all\s+all\s+127\.0\.0\.1/32\s+.*$'
-        line: 'host all all 127.0.0.1/32 md5'
-        state: present
-      when: ansible_facts['os_family'] == "RedHat"
-      notify: restart postgres
-
-    - name: Ajustar pg_hba.conf (RedHat - IPv6)
-      ansible.builtin.lineinfile:
-        path: /var/lib/pgsql/data/pg_hba.conf
-        regexp: '^host\s+all\s+all\s+::1/128\s+.*$'
-        line: 'host all all ::1/128 md5'
-        state: present
-      when: ansible_facts['os_family'] == "RedHat"
-      notify: restart postgres
-
-    - name: Ajustar pg_hba.conf (Debian/Ubuntu - local)
-      ansible.builtin.lineinfile:
-        path: "/etc/postgresql/{{ ansible_facts['distribution_major_version'] }}/main/pg_hba.conf"
-        regexp: '^local\s+all\s+all\s+.*$'
-        line: 'local all all md5'
-        state: present
-      when: ansible_facts['os_family'] == "Debian"
-      notify: restart postgres
-
-    ######################################################################
-    # Criação de DB e usuário
+    # Banco de dados e usuário
     ######################################################################
     - name: Criar database de teste PostgreSQL
       community.postgresql.postgresql_db:
@@ -74,7 +77,7 @@
       community.postgresql.postgresql_user:
         name: "{{ postgres_user }}"
         password: "{{ postgres_password }}"
-        role_attr_flags: CREATEDB,LOGIN
+        role_attr_flags: CREATEDB
         state: present
         login_user: postgres
 
