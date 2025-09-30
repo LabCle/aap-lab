@@ -1,10 +1,25 @@
 ---
-- name: Validar bancos de dados MySQL e PostgreSQL
+- name: Validar bancos PostgreSQL e MySQL
   hosts: linux
   become: true
+
   tasks:
     ######################################################################
-    # Validação MySQL
+    # PostgreSQL
+    ######################################################################
+    - name: Obter informações dos bancos PostgreSQL
+      become_user: postgres
+      community.postgresql.postgresql_info:
+      register: pg_info
+      ignore_errors: true
+
+    - name: Exibir bancos PostgreSQL
+      debug:
+        var: pg_info.databases
+      when: pg_info is defined and not pg_info.failed
+
+    ######################################################################
+    # MySQL / MariaDB
     ######################################################################
     - name: Validar bancos MySQL
       community.mysql.mysql_info:
@@ -16,21 +31,4 @@
     - name: Exibir bancos MySQL
       debug:
         var: mysql_info.databases
-      when: mysql_info is defined and mysql_info.databases is defined
-
-    ######################################################################
-    # Validação PostgreSQL
-    ######################################################################
-    - name: Validar bancos PostgreSQL
-      community.postgresql.postgresql_info:
-        login_user: pguser
-        login_password: "PgPass123"
-        login_db: postgres     # 👈 aqui é o parâmetro correto
-      register: pg_info
-      become_user: postgres
-      ignore_errors: true
-
-    - name: Exibir bancos PostgreSQL
-      debug:
-        var: pg_info
-      when: pg_info is defined
+      when: mysql_info is defined and not mysql_info.failed
