@@ -1,40 +1,36 @@
 ---
-- name: Validar bancos de dados MySQL/MariaDB e PostgreSQL
+- name: Validar bancos de dados MySQL e PostgreSQL
   hosts: linux
   become: true
-  vars:
-    mysql_root_password: "SenhaForte123"
-    postgres_user: "postgres"
-
   tasks:
     ######################################################################
-    # MySQL / MariaDB
+    # Validação MySQL
     ######################################################################
-    - name: Validar conexão MySQL/MariaDB
-      ansible.builtin.command: >
-        mysql -u root -p{{ mysql_root_password }} -e "SHOW DATABASES;"
-      register: mysql_output
-      changed_when: false
+    - name: Validar bancos MySQL
+      community.mysql.mysql_info:
+        login_user: root
+        login_password: "SenhaForte123"
+      register: mysql_info
       ignore_errors: true
 
-    - name: Exibir bancos MySQL/MariaDB
-      ansible.builtin.debug:
-        msg: "{{ mysql_output.stdout_lines }}"
-      when: mysql_output.rc == 0
+    - name: Exibir bancos MySQL
+      debug:
+        var: mysql_info.databases
+      when: mysql_info is defined
 
     ######################################################################
-    # PostgreSQL
+    # Validação PostgreSQL
     ######################################################################
-    - name: Validar conexão PostgreSQL
-      ansible.builtin.command: >
-        psql -U {{ postgres_user }} -d postgres -c "\l"
-      register: postgres_output
-      environment:
-        PGPASSWORD: ""
-      changed_when: false
+    - name: Validar bancos PostgreSQL (com usuário dedicado)
+      community.postgresql.postgresql_info:
+        login_user: pguser
+        login_password: "PgPass123"
+        db: labpg
+      register: pg_info
+      become_user: postgres
       ignore_errors: true
 
     - name: Exibir bancos PostgreSQL
-      ansible.builtin.debug:
-        msg: "{{ postgres_output.stdout_lines }}"
-      when: postgres_output.rc == 0
+      debug:
+        var: pg_info.databases
+      when: pg_info is defined
